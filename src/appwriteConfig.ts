@@ -1,13 +1,9 @@
 import { Account, Client, Databases, Storage, TablesDB } from "appwrite";
 
-const appwriteEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
-const appwriteProjectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
-const appwriteProjectName = import.meta.env.VITE_APPWRITE_PROJECT_NAME;
-const appwriteDatabaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-
-if (!appwriteEndpoint || !appwriteProjectId || !appwriteDatabaseId) {
-  throw new Error("Missing Appwrite endpoint, project ID, or database ID in .env");
-}
+const appwriteEndpoint = "https://fra.cloud.appwrite.io/v1";
+const appwriteProjectId = "69f8c1430006e29dfbc6";
+const appwriteProjectName = "webApp";
+const appwriteDatabaseId = "69f8c577003a399bd798";
 
 const client = new Client()
   .setEndpoint(appwriteEndpoint)

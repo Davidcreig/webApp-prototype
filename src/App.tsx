@@ -1,21 +1,48 @@
 import { useEffect, useState } from 'react'
 import type { Models } from 'appwrite'
 import AppWindow from './components/AppWindow'
+import LoginScreen from './components/LoginScreen'
 import TileContainer from './containers/TileContainer'
-import { appwriteDatabaseId, tablesDB } from './appwriteConfig'
+import { account, appwriteDatabaseId, tablesDB } from './appwriteConfig'
 
 type AppRow = Models.Row & {
   appName?: string
 }
 
 function App() {
+  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null)
   const [apps, setApps] = useState<string[]>([])
   const [openApp, setOpenApp] = useState<string | null>(null)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [isLoadingApps, setIsLoadingApps] = useState(true)
   const [appsError, setAppsError] = useState<string | null>(null)
 
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const currentUser = await account.get()
+        setUser(currentUser)
+      } catch {
+        setUser(null)
+      } finally {
+        setIsCheckingAuth(false)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setApps([])
+      setIsLoadingApps(false)
+      return
+    }
+
     const loadApps = async () => {
+      setAppsError(null)
+      setIsLoadingApps(true)
+
       try {
         const response = await tablesDB.listRows<AppRow>({
           databaseId: appwriteDatabaseId,
@@ -36,14 +63,49 @@ function App() {
     }
 
     loadApps()
-  }, [])
+  }, [user])
+
+  const handleLogin = async (email: string, password: string) => {
+    await account.createEmailPasswordSession({
+      email,
+      password,
+    })
+
+    const currentUser = await account.get()
+    setUser(currentUser)
+  }
+
+  const handleLogout = async () => {
+    await account.deleteSession({
+      sessionId: "current",
+    })
+
+    setUser(null)
+    setOpenApp(null)
+  }
+
+  if (isCheckingAuth) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10 text-slate-950">
+        <p className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm">
+          Checking session...
+        </p>
+      </main>
+    )
+  }
+
+  if (!user) {
+    return <LoginScreen onLogin={handleLogin} />
+  }
+
+  const emailDomain = user.email.split("@")[1] ?? "Unknown"
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-950">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-8">
         <header className="flex flex-col gap-3 border-b border-slate-200 pb-8">
           <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
-            Workspace
+            {emailDomain} Workspace
           </p>
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
@@ -51,12 +113,16 @@ function App() {
                 Your Apps
               </h1>
               <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-                Quick access to your reporting tools.
+                Quick access to your reporting tools, signed in as {user.email}.
               </p>
             </div>
-            {/* <button className="w-fit rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-              New report
-            </button> */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-fit rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+            >
+              Sign out
+            </button>
           </div>
         </header>
 
